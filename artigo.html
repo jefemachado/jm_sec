@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquitetura de Catálogos Seguros no SAP Fiori | Jeferson Machado</title>
+    <meta name="description" content="Uma análise sobre como desenhar matrizes de acesso resilientes para o frontend Fiori.">
+    
+    <!-- Política de Segurança de Conteúdo (CSP) Base -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://placehold.co https://images.unsplash.com;">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Tailwind CSS com plugin de Tipografia -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#050505',
+                            card: '#0B1120',
+                            borderDark: '#1E293B',
+                            light: '#F8FAFC',
+                            cardLight: '#FFFFFF',
+                            borderLight: '#E2E8F0',
+                            cyan: '#0ea5e9',
+                            indigo: '#6366f1',
+                            textMainDark: '#F8FAFC',
+                            textMutedDark: '#94A3B8',
+                            textMainLight: '#0F172A',
+                            textMutedLight: '#475569'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { transition: background-color 0.3s ease, color 0.3s ease; }
+        pre { background-color: #0B1120 !important; border: 1px solid #1E293B; border-radius: 0.5rem; }
+    </style>
+</head>
+
+<body class="font-sans antialiased bg-brand-light text-brand-textMainLight dark:bg-brand-dark dark:text-brand-textMainDark selection:bg-brand-cyan selection:text-white flex flex-col min-h-screen">
+
+    <!-- Header Fixo (Idêntico ao index.html) -->
+    <header class="fixed w-full top-0 z-50 bg-white/90 dark:bg-[#050505]/90 backdrop-blur-md border-b border-brand-borderLight dark:border-white/5 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex-shrink-0 flex items-center text-xl font-bold font-mono tracking-tighter">
+                    <a href="index.html#home" class="text-slate-800 dark:text-white">~/jm_<span class="text-brand-cyan">sec</span></a>
+                </div>
+                
+                <nav class="hidden md:flex items-center space-x-6 font-medium">
+                    <a href="index.html#home" class="text-brand-textMutedLight dark:text-brand-textMutedDark hover:text-brand-cyan transition-colors text-sm">Home</a>
+                    <a href="index.html#categorias" class="text-brand-textMutedLight dark:text-brand-textMutedDark hover:text-brand-cyan transition-colors text-sm">Categorias</a>
+                    <a href="index.html#sobre" class="text-brand-textMutedLight dark:text-brand-textMutedDark hover:text-brand-cyan transition-colors text-sm">Sobre</a>
+                    <a href="index.html#contato" class="text-brand-textMutedLight dark:text-brand-textMutedDark hover:text-brand-cyan transition-colors text-sm">Contato</a>
+                    
+                    <div class="relative ml-4">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <i class="fa-solid fa-magnifying-glass text-brand-textMutedLight dark:text-brand-textMutedDark text-sm"></i>
+                        </div>
+                        <input type="text" class="block w-full rounded-full border-0 py-1.5 pl-9 pr-3 text-sm text-brand-textMainLight dark:text-white bg-slate-100 dark:bg-white/5 ring-1 ring-inset ring-brand-borderLight dark:ring-white/10 focus:ring-2 focus:ring-inset focus:ring-brand-cyan placeholder:text-slate-400 w-48 lg:w-64 transition-all" placeholder="Buscar artigos...">
+                    </div>
+                    
+                    <button id="theme-toggle-desktop" class="p-2 rounded-full bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-brand-cyan hover:bg-slate-300 dark:hover:bg-white/10 transition-colors focus:outline-none">
+                        <i class="fa-solid fa-moon hidden dark:block"></i>
+                        <i class="fa-solid fa-sun block dark:hidden"></i>
+                    </button>
+                </nav>
+
+                <div class="md:hidden flex items-center space-x-4">
+                    <button id="theme-toggle-mobile" class="p-2 text-slate-600 dark:text-brand-cyan focus:outline-none">
+                        <i class="fa-solid fa-moon hidden dark:block"></i>
+                        <i class="fa-solid fa-sun block dark:hidden"></i>
+                    </button>
+                    <button id="mobile-menu-btn" class="text-brand-textMutedLight dark:text-brand-textMutedDark hover:text-brand-cyan focus:outline-none">
+                        <i class="fa-solid fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden bg-brand-cardLight dark:bg-brand-dark border-b border-brand-borderLight dark:border-white/5">
+            <div class="px-4 pt-2 pb-4 space-y-1">
+                <div class="relative mb-4 mt-2">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-brand-textMutedLight dark:text-brand-textMutedDark text-sm"></i>
+                    </div>
+                    <input type="text" class="block w-full rounded-md border-0 py-2 pl-9 pr-3 text-sm bg-slate-100 dark:bg-white/5 ring-1 ring-inset ring-brand-borderLight dark:ring-white/10 focus:ring-2 focus:ring-brand-cyan placeholder:text-slate-400" placeholder="Buscar artigos...">
+                </div>
+                <a href="index.html#home" class="block px-3 py-2 text-base font-medium text-brand-textMutedLight dark:text-brand-textMutedDark hover:text-brand-cyan">Home</a>
+                <a href="index.html#categorias" class="block px-3 py-2 text-base font-medium text-brand-textMutedLight dark:text-brand-textMutedDark hover:text-brand-cyan">Categorias</a>
+                <a href="index.html#sobre" class="block px-3 py-2 text-base font-medium text-brand-textMutedLight dark:text-brand-textMutedDark hover:text-brand-cyan">Sobre</a>
+                <a href="index.html#contato" class="block px-3 py-2 text-base font-medium text-brand-textMutedLight dark:text-brand-textMutedDark hover:text-brand-cyan">Contato</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow pt-32 pb-24">
+        <article class="max-w-3xl mx-auto px-6 lg:px-8">
+            
+            <div class="mb-10">
+                <a href="index.html#categorias" class="text-sm font-semibold text-brand-textMutedLight dark:text-brand-textMutedDark hover:text-brand-cyan transition-colors flex items-center">
+                    <i class="fa-solid fa-arrow-left mr-2"></i> Voltar para categorias
+                </a>
+            </div>
+
+            <header class="mb-12 border-b border-brand-borderLight dark:border-white/5 pb-8">
+                <div class="flex items-center gap-x-4 text-sm mb-6">
+                    <time datetime="2026-06-20" class="text-brand-textMutedLight dark:text-brand-textMutedDark font-mono">20 de Junho, 2026</time>
+                    <span class="rounded-full bg-blue-50 dark:bg-white/5 border border-brand-borderLight dark:border-white/10 px-3 py-1 font-medium text-brand-cyan text-xs">SAP Fiori</span>
+                    <span class="text-brand-textMutedLight dark:text-brand-textMutedDark"><i class="fa-regular fa-clock mr-1"></i> 8 min read</span>
+                </div>
+                
+                <h1 class="text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl mb-6">
+                    Arquitetura de Catálogos Seguros no SAP Fiori
+                </h1>
+                
+                <p class="text-xl text-slate-600 dark:text-gray-400 leading-relaxed">
+                    Uma análise profunda sobre como desenhar matrizes de acesso resilientes para o frontend Fiori, evitando sobreposição de autorizações e garantindo a governança no S/4HANA sob a ótica do Zero Trust.
+                </p>
+                
+                <div class="mt-8 flex items-center gap-x-4">
+                    <img src="https://ui-avatars.com/api/?name=Jeferson+Machado&background=0ea5e9&color=fff" alt="Jeferson Machado" class="h-10 w-10 rounded-full">
+                    <div class="text-sm leading-6">
+                        <p class="font-semibold text-slate-900 dark:text-white">Jeferson Machado</p>
+                        <p class="text-brand-textMutedLight dark:text-brand-textMutedDark">Arquiteto SecOps & GRC</p>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Artigo Formatado com Typography Plugin -->
+            <div class="prose prose-slate prose-lg dark:prose-invert max-w-none prose-a:text-brand-cyan hover:prose-a:text-brand-indigo prose-headings:font-bold prose-pre:border prose-pre:border-brand-borderDark">
+                
+                <h2>O Paradigma do Frontend vs. Backend</h2>
+                <p>Na transição do tradicional SAP GUI (ECC) para o S/4HANA, o <strong>SAP Fiori</strong> altera fundamentalmente a topologia de acesso. O usuário não consome mais transações diretamente no core da aplicação; em vez disso, ele interage com aplicativos no <em>Frontend Server (FES)</em> que se comunicam via OData com o <em>Backend Server (BES)</em>.</p>
+                
+                <p>Isso significa que, do ponto de vista de Segurança e Governança, administrar perfis na <code>PFCG</code> tornou-se um processo bidimensional. Um erro comum em projetos S/4HANA é tratar a segurança do Fiori apenas como "liberação de tiles" (visibilidade), esquecendo da autorização de consumo de dados por trás dos serviços.</p>
+
+                <h3>1. Segregação de Catálogos de Negócio (Business Catalogs)</h3>
+                <p>O princípio do menor privilégio (PoLP) dita que o usuário deve ter acesso apenas aos aplicativos estritamente necessários para sua função. Para isso, evite a utilização de catálogos standard da SAP em ambiente produtivo.</p>
+                
+                <ul>
+                    <li><strong>Standard:</strong> Utilizados apenas no ambiente de Sandbox para exploração (Prefixo <code>SAP_TC_</code> ou <code>SAP_BC_</code>).</li>
+                    <li><strong>Customizados:</strong> Catálogos criados do zero, contendo apenas as <em>Target Mappings</em> e <em>Tiles</em> validadas pelo negócio (Prefixo <code>Z_BC_</code> ou <code>Y_BC_</code>).</li>
+                </ul>
+
+                <blockquote>
+                    <p><strong>Dica de Arquiteto:</strong> Agrupar dezenas de aplicativos não relacionados em um único catálogo gigantesco para "poupar tempo" destrói a sua matriz SoD (Segregation of Duties) no SAP GRC antes mesmo das regras serem executadas.</p>
+                </blockquote>
+
+                <h3>2. Rastreamento e Automação com Python</h3>
+                <p>Para garantir que não existem serviços OData expostos sem o devido catálogo atrelado, costumo desenvolver rotinas em Python que cruzam a exportação de tabelas de frontend com a matriz de riscos do GRC.</p>
+
+<pre><code class="language-python"># Script de SecOps para auditoria de Catálogos Fiori
+import pandas as pd
+
+def auditar_catalogos(arquivo_export_fiori, arquivo_matriz_risco):
+    df_fiori = pd.read_csv(arquivo_export_fiori)
+    
+    riscos = df_fiori[
+        (df_fiori['Catalog_ID'].str.startswith('SAP_')) & 
+        (df_fiori['Role_Name'].str.startswith('Z:'))
+    ]
+    
+    if not riscos.empty:
+        print("[!] ALERTA: Violação de governança detectada.")
+    else:
+        print("[OK] Conformidade mantida.")
+</code></pre>
+
+                <h2>Conclusão Estratégica</h2>
+                <p>A segurança no SAP Fiori exige muito mais do que conhecimento técnico na transação <code>SU24</code> ou no Launchpad Designer. Exige visão arquitetural. Ao desenhar catálogos granulares e testar o consumo OData garantimos que o S/4HANA opere estritamente <strong>Secure by Design</strong>.</p>
+            </div>
+        </article>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-brand-light dark:bg-[#050505] border-t border-brand-borderLight dark:border-white/5 py-8 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+            <div class="font-mono text-sm text-slate-500 dark:text-brand-textMutedDark mb-4 md:mb-0">
+                &copy; 2026 jm_sec
+            </div>
+            <div class="flex space-x-6 text-slate-400 dark:text-brand-textMutedDark">
+                <a href="#" class="hover:text-brand-cyan transition-colors"><i class="fa-brands fa-linkedin text-xl"></i></a>
+                <a href="#" class="hover:text-brand-cyan transition-colors"><i class="fa-brands fa-github text-xl"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+        btn.addEventListener('click', () => { menu.classList.toggle('hidden'); });
+
+        const themeToggleDesktop = document.getElementById('theme-toggle-desktop');
+        const themeToggleMobile = document.getElementById('theme-toggle-mobile');
+        const htmlElement = document.documentElement;
+
+        function initTheme() {
+            try {
+                if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    htmlElement.classList.add('dark');
+                } else {
+                    htmlElement.classList.remove('dark');
+                }
+            } catch (e) {
+                htmlElement.classList.add('dark'); 
+            }
+        }
+
+        function toggleTheme() {
+            htmlElement.classList.toggle('dark');
+            try {
+                localStorage.theme = htmlElement.classList.contains('dark') ? 'dark' : 'light';
+            } catch (e) {}
+        }
+
+        initTheme();
+        if(themeToggleDesktop) themeToggleDesktop.addEventListener('click', toggleTheme);
+        if(themeToggleMobile) themeToggleMobile.addEventListener('click', toggleTheme);
+    </script>
+</body>
+</html>
